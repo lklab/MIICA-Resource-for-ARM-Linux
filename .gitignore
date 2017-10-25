@@ -1,0 +1,7 @@
+release*
+build*
+*.tar.xz
+*.zip
+
+SOEM-master
+toolchain.cmake
