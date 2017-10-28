@@ -76,14 +76,11 @@ cd ..
 
 # copy result files to release
 echo -e "stdio\nsoemio" > ${RELEASE}/iolibs.txt
-if [ ! -d ${RELEASE}/include ] ; then
-	mkdir ${RELEASE}/include
-fi
 if [ ! -d ${RELEASE}/lib ] ; then
 	mkdir ${RELEASE}/lib
 fi
-cp include/*.h ${RELEASE}/include
 cp build_lib/lib*.a ${RELEASE}/lib
 
 # setup finished
 echo "setup finished"
+
