@@ -75,7 +75,7 @@ make
 cd ..
 
 # copy result files to release
-echo -e "stdio\nsoemio" > ${RELEASE}/iolibs.txt
+echo -e "Standard I/O = stdio\nSOEM = soemio" > ${RELEASE}/ioliblist.txt
 if [ ! -d ${RELEASE}/lib ] ; then
 	mkdir ${RELEASE}/lib
 fi
