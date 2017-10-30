@@ -75,11 +75,12 @@ make
 cd ..
 
 # copy result files to release
-echo -e "Standard I/O = stdio\nSOEM = soemio" > ${RELEASE}/ioliblist.txt
+cp liblist.xml ${RELEASE}
 if [ ! -d ${RELEASE}/lib ] ; then
 	mkdir ${RELEASE}/lib
 fi
 cp build_lib/lib*.a ${RELEASE}/lib
+cp SOEM-master/install/lib/libsoem.a ${RELEASE}/lib
 
 # setup finished
 echo "setup finished"
