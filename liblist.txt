@@ -1,0 +1,3 @@
+default=rt
+Standard I/O=stdio
+SOEM=soemio soem pthread

@@ -75,7 +75,7 @@ make
 cd ..
 
 # copy result files to release
-cp liblist.xml ${RELEASE}
+cp liblist.txt ${RELEASE}
 if [ ! -d ${RELEASE}/lib ] ; then
 	mkdir ${RELEASE}/lib
 fi
@@ -84,4 +84,3 @@ cp SOEM-master/install/lib/libsoem.a ${RELEASE}/lib
 
 # setup finished
 echo "setup finished"
-
