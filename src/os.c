@@ -11,7 +11,7 @@
 static struct timespec read_time;
 static struct timespec release_time;
 
-static os_func_t registered_handler = NULL;
+static os_sig_t registered_handler = NULL;
 
 static void sigint_handler(int sig);
 static void timespec_chk_overflow(struct timespec *ts);
@@ -49,14 +49,14 @@ int os_task_stop(task_t* task)
 	return 0;
 }
 
-int os_register_interrupt_handler(os_func_t handler)
+int os_signal(os_sig_t handler)
 {
 	registered_handler = handler;
 	signal(SIGINT, sigint_handler);
 	return 0;
 }
 
-void os_exit_process(int value)
+void os_exit(int value)
 {
 	exit(value);
 }
@@ -64,16 +64,6 @@ void os_exit_process(int value)
 void* os_memcpy(void* s1, const void* s2, unsigned int n)
 {
 	return memcpy(s1, s2, (size_t)n);
-}
-
-void* os_malloc(unsigned int size)
-{
-	return malloc((size_t)size);
-}
-
-void os_free(void *ptr)
-{
-	return free(ptr);
 }
 
 static void sigint_handler(int sig)
