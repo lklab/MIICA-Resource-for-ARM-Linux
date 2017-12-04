@@ -7,11 +7,11 @@
 
 RELEASE="release/"
 
-TOOLCHAIN_NAME="gcc-linaro-7.1.1-2017.08-x86_64_arm-linux-gnueabihf"
+TOOLCHAIN_NAME="gcc-linaro-7.2.1-2017.11-x86_64_arm-linux-gnueabihf"
 TOOLCHAIN_COMP_NAME=${TOOLCHAIN_NAME}".tar.xz"
 TOOLCHAIN_ROOT=${RELEASE}${TOOLCHAIN_NAME}
 TOOLCHAIN_COMP_PATH=${TOOLCHAIN_ROOT}".tar.xz"
-TOOLCHAIN_REPO="https://releases.linaro.org/components/toolchain/binaries/latest/arm-linux-gnueabihf/"${TOOLCHAIN_COMP_NAME}
+TOOLCHAIN_REPO="https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/arm-linux-gnueabihf/"${TOOLCHAIN_COMP_NAME}
 
 CROSS_COMPILER_NAME="/bin/arm-linux-gnueabihf-"
 CROSS_COMPILER_ROOT=$(pwd)/${TOOLCHAIN_ROOT}${CROSS_COMPILER_NAME}
