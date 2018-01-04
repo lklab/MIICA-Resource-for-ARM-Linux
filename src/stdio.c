@@ -42,7 +42,7 @@ int io_mapping(void* variable, int size, char* address, int direction)
 	case 4 : break;
 	default :
 		free(io_value);
-		return -1;
+		return 1;
 	}
 
 	if(direction)

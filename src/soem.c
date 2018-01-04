@@ -110,7 +110,7 @@ int io_init(void)
 					}
 				}*/
 				fprintf(stderr, "Not all slaves reached safe operational state\n");
-				return -1;
+				return 1;
 			}
 
 			/* read mapping info. */
@@ -158,21 +158,21 @@ int io_init(void)
 					}
 				}*/
 				fprintf(stderr, "Not all slaves reached operational state\n");
-				return -1;
+				return 1;
 			}
 		}
 		else
 		{
 			/* No slaves found! */
 			fprintf(stderr, "No slaves found!\n");
-			return -1;
+			return 1;
 		}
 	}
 	else
 	{
 		/* No socket connection on eth0, Excecute as root */
 		fprintf(stderr, "No socket connection on eth0, Excecute as root\n");
-		return -1;
+		return 1;
 	}
 }
 
@@ -195,13 +195,13 @@ int io_mapping(void* variable, int size, char* address, int direction)
 		free(io_value);
 		fprintf(stderr, "I/O mapping failed : no found index : 0x%x, subindex : 0x%x object\n",
 			index, subindex);
-		return -1;
+		return 1;
 	}
 	if(((io_value -> pdo_mapping -> bitlen) / 8) > size)
 	{
 		free(io_value);
 		fprintf(stderr, "I/O mapping failed : not enough size of model variable\n");
-		return -1;
+		return 1;
 	}
 
 	if(direction)
@@ -318,7 +318,7 @@ static int si_map_sdo()
 {
 	int slave;
 	int wkc, rdl;
-	int retVal = 0;
+	int retVal = 1;
 	uint8 nSM, iSM, tSM;
 	int Tsize, outputs_bo, inputs_bo;
 	uint8 SMt_bug_add;
@@ -382,7 +382,7 @@ static int si_map_sdo()
 
 	/* found some I/O bits ? */
 	if((outputs_bo > 0) || (inputs_bo > 0))
-		retVal = 1;
+		retVal = 0;
 	return retVal;
 }
 
