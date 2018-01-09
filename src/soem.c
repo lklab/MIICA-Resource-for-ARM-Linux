@@ -52,7 +52,6 @@ struct io_value_t
 	int size;
 	int slave;
 	pdo_mapping_t* pdo_mapping;
-	io_value_t* next;
 };
 
 static int si_map_sdo();
@@ -66,11 +65,10 @@ static char* ifname = "eth0";
 static slave_info_t* slave_list = NULL;
 static int slave_num = 0;
 
+static int input_count = 0;
+static int output_count = 0;
 static io_value_t* input_list = NULL;
 static io_value_t* output_list = NULL;
-
-static io_value_t* input_tail = NULL;
-static io_value_t* output_tail = NULL;
 
 static int is_connected = 0;
 
@@ -176,95 +174,124 @@ int io_init(void)
 	}
 }
 
-int io_mapping(void* variable, int size, char* address, int direction)
+int io_mapping(io_mapping_info_t* mapping_list, int mapping_count)
 {
+	int i;
+	int ic = 0;
+	int oc = 0;
+	io_value_t* temp_target = NULL;
+
 	int slave, index, subindex;
-	io_value_t* io_value;
 
-	io_value = (io_value_t*)malloc(sizeof(io_value_t));
-	io_value -> variable = variable;
-	io_value -> size = size;
-	io_value -> pdo_mapping = NULL; 
-	io_value -> next = NULL;
-
-	sscanf(address, "%d:0x%x:0x%x", &slave, &index, &subindex);
-	io_value -> slave = slave;
-	io_value -> pdo_mapping = find_pdo_mapping(slave, index, subindex, direction);
-	if(io_value -> pdo_mapping == NULL)
+	if(input_count != 0 || output_count != 0)
 	{
-		free(io_value);
-		fprintf(stderr, "I/O mapping failed : no found index : 0x%x, subindex : 0x%x object\n",
-			index, subindex);
-		return 1;
-	}
-	if(((io_value -> pdo_mapping -> bitlen) / 8) > size)
-	{
-		free(io_value);
-		fprintf(stderr, "I/O mapping failed : not enough size of model variable\n");
-		return 1;
+		free(input_list);
+		free(output_list);
+		input_list = NULL;
+		output_list = NULL;
+		input_count = 0;
+		output_count = 0;
 	}
 
-	if(direction)
+	for(i = 0; i < mapping_count; i++)
 	{
-		if(input_list == NULL)
-			input_list = io_value;
-		else
-			input_tail -> next = io_value;
-		input_tail = io_value;
-	}
-	else
-	{
-		if(output_list == NULL)
-			output_list = io_value;
-		else
-			output_tail -> next = io_value;
-		output_tail = io_value;
+		switch(mapping_list[i].size)
+		{
+			case 1 :
+			case 2 :
+			case 4 : break;
+			default : goto EXCEPTION;
+		}
+
+		if(mapping_list[i].direction == 1)
+			input_count++;
+		else if(mapping_list[i].direction == 0)
+			output_count++;
 	}
 
+	input_list = (io_value_t*)malloc(sizeof(io_value_t) * input_count);
+	output_list = (io_value_t*)malloc(sizeof(io_value_t) * output_count);
+
+	for(i = 0; i < mapping_count; i++)
+	{
+		if(mapping_list[i].direction == 1)
+			temp_target = &input_list[ic++];
+		else if(mapping_list[i].direction == 0)
+			temp_target = &output_list[oc++];
+
+		temp_target -> variable = mapping_list[i].model_addr;
+		temp_target -> size = mapping_list[i].size;
+		temp_target -> pdo_mapping = NULL; 
+
+		sscanf(mapping_list[i].network_addr, "%d:0x%x:0x%x", &slave, &index, &subindex);
+		temp_target -> slave = slave;
+		temp_target -> pdo_mapping = find_pdo_mapping(slave, index, subindex, mapping_list[i].direction);
+
+		if(temp_target -> pdo_mapping == NULL)
+		{
+			fprintf(stderr, "I/O mapping failed : no found index : 0x%x, subindex : 0x%x object\n",
+				index, subindex);
+			goto EXCEPTION;
+		}
+		if(((temp_target -> pdo_mapping -> bitlen) / 8) > mapping_list[i].size)
+		{
+			fprintf(stderr, "I/O mapping failed : not enough size of model variable\n");
+			goto EXCEPTION;
+		}
+	}
+
+	return 0;
+
+EXCEPTION :
+	free(input_list);
+	free(output_list);
+	input_list = NULL;
+	output_list = NULL;
+	input_count = 0;
+	output_count = 0;
+	return 1;
+}
+
+int io_activate(unsigned long long interval)
+{
 	return 0;
 }
 
 int io_exchange(void)
 {
+	int i;
 	int wkc;
 	char* byte;
-	io_value_t* list;
 
-	list = output_list;
-	while(list != NULL)
+	for(i = 0; i < output_count; i++)
 	{
-		if(list -> pdo_mapping -> bitlen >= 8)
-			memcpy(ec_slave[list -> slave].outputs + (list -> pdo_mapping -> abs_offset),
-				list -> variable, (list -> pdo_mapping -> bitlen) / 8);
+		if(output_list[i].pdo_mapping -> bitlen >= 8)
+			memcpy(ec_slave[output_list[i].slave].outputs + (output_list[i].pdo_mapping -> abs_offset),
+				output_list[i].variable, (output_list[i].pdo_mapping -> bitlen) / 8);
 		else
 		{
-			byte = ec_slave[list -> slave].outputs + (list -> pdo_mapping -> abs_offset);
-			*byte &= ~((list -> pdo_mapping -> bitmask) << (list -> pdo_mapping -> abs_bit));
-			*byte |= ((*((char*)(list -> variable)) & (list -> pdo_mapping -> bitmask)) << (list -> pdo_mapping -> abs_bit));
+			byte = ec_slave[output_list[i].slave].outputs + (output_list[i].pdo_mapping -> abs_offset);
+			*byte &= ~((output_list[i].pdo_mapping -> bitmask) << (output_list[i].pdo_mapping -> abs_bit));
+			*byte |= ((*((char*)(output_list[i].variable)) & (output_list[i].pdo_mapping -> bitmask)) << (output_list[i].pdo_mapping -> abs_bit));
 		}
-
-		list = list -> next;
 	}
 
 	ec_send_processdata();
 	wkc = ec_receive_processdata(EC_TIMEOUTRET);
 
-	list = input_list;
-	while(list != NULL)
+	for(i = 0; i < input_count; i++)
 	{
-		if(list -> pdo_mapping -> bitlen >= 8)
-			memcpy(list -> variable,
-				ec_slave[list -> slave].inputs + (list -> pdo_mapping -> abs_offset),
-				(list -> pdo_mapping -> bitlen) / 8);
+		if(input_list[i].pdo_mapping -> bitlen >= 8)
+			memcpy(input_list[i].variable,
+				ec_slave[input_list[i].slave].inputs + (input_list[i].pdo_mapping -> abs_offset),
+				(input_list[i].pdo_mapping -> bitlen) / 8);
 		else
 		{
-			memset(list -> variable, 0, list -> size);
-			*((char*)(list -> variable)) =
-				(*(ec_slave[list -> slave].inputs + (list -> pdo_mapping -> abs_offset)) >>
-				(list -> pdo_mapping -> abs_bit)) & (list -> pdo_mapping -> bitmask);
+			memset(input_list[i].variable, 0, input_list[i].size);
+			*((char*)(input_list[i].variable)) =
+				(*(ec_slave[input_list[i].slave].inputs + (input_list[i].pdo_mapping -> abs_offset)) >>
+				(input_list[i].pdo_mapping -> abs_bit)) & (input_list[i].pdo_mapping -> bitmask);
 		}
-
-		list = list -> next;
 	}
 
 	return 0;
@@ -272,8 +299,6 @@ int io_exchange(void)
 
 int io_cleanup(void)
 {
-	io_value_t* list;
-	io_value_t* tmp;
 	int slave, i;
 
 	/* free pdo mapping lists */
@@ -289,19 +314,17 @@ int io_cleanup(void)
 	free(slave_list);
 
 	/* free exchange lists */
-	list = output_list;
-	while(list != NULL)
+	if(input_list != NULL)
 	{
-		tmp = list -> next;
-		free(list);
-		list = tmp;
+		free(input_list);
+		input_list = NULL;
+		input_count = 0;
 	}
-	list = input_list;
-	while(list != NULL)
+	if(output_list != NULL)
 	{
-		tmp = list -> next;
-		free(list);
-		list = tmp;
+		free(output_list);
+		output_list = NULL;
+		output_count = 0;
 	}
 	
 	/* close connection */

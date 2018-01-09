@@ -3,93 +3,104 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct io_value_t io_value_t;
-
-struct io_value_t
+typedef struct io_value_t
 {
 	void* variable;
 	int size;
 	char* name;
-	io_value_t* next;
-};
+} io_value_t;
+
+static int input_count = 0;
+static int output_count = 0;
+static io_value_t* input_list = NULL;
+static io_value_t* output_list = NULL;
 
 static int exchange_count = 0;
 static int skip_count = 0;
 
-static io_value_t* input_list = NULL;
-static io_value_t* output_list = NULL;
-
-static io_value_t* input_tail = NULL;
-static io_value_t* output_tail = NULL;
-
 int io_init(void)
 {
+	input_count = 0;
+	output_count = 0;
+
 	return 0;
 }
 
-int io_mapping(void* variable, int size, char* address, int direction)
+int io_mapping(io_mapping_info_t* mapping_list, int mapping_count)
 {
-	io_value_t* io_value = (io_value_t*)malloc(sizeof(io_value_t));
-	io_value -> variable = variable;
-	io_value -> size = size;
-	io_value -> name = address;
-	io_value -> next = NULL;
+	int i;
+	int ic = 0;
+	int oc = 0;
+	io_value_t* temp_target = NULL;
 
-	switch(size)
-	{
-	case 1 :
-	case 2 :
-	case 4 : break;
-	default :
-		free(io_value);
+	if(input_count != 0 || output_count != 0)
 		return 1;
+
+	for(i = 0; i < mapping_count; i++)
+	{
+		switch(mapping_list[i].size)
+		{
+			case 1 :
+			case 2 :
+			case 4 : break;
+			default :
+				input_count = 0;
+				output_count = 0;
+				return 1;
+		}
+
+		if(mapping_list[i].direction == 1)
+			input_count++;
+		else if(mapping_list[i].direction == 0)
+			output_count++;
 	}
 
-	if(direction)
+	input_list = (io_value_t*)malloc(sizeof(io_value_t) * input_count);
+	output_list = (io_value_t*)malloc(sizeof(io_value_t) * output_count);
+
+	for(i = 0; i < mapping_count; i++)
 	{
-		if(input_list == NULL)
-			input_list = io_value;
-		else
-			input_tail -> next = io_value;
-		input_tail = io_value;
-	}
-	else
-	{
-		if(output_list == NULL)
-			output_list = io_value;
-		else
-			output_tail -> next = io_value;
-		output_tail = io_value;
+		if(mapping_list[i].direction == 1)
+			temp_target = &input_list[ic++];
+		else if(mapping_list[i].direction == 0)
+			temp_target = &output_list[oc++];
+
+		temp_target -> variable = mapping_list[i].model_addr;
+		temp_target -> size = mapping_list[i].size;
+		temp_target -> name = mapping_list[i].network_addr;
 	}
 
+	return 0;
+}
+
+int io_activate(unsigned long long interval)
+{
 	return 0;
 }
 
 int io_exchange(void)
 {
-	io_value_t* list;
+	int i;
 
 	printf("exchange count = %d\n\n", exchange_count++);
 
-	list = output_list;
-	while(list != NULL)
+	for(i = 0; i < output_count; i++)
 	{
-		switch(list -> size)
+		switch(output_list[i].size)
 		{
-		case 1 :
-			printf("output value of [%s] : %d\n", list -> name,
-				*((char*)(list -> variable)));
-			break;
-		case 2 :
-			printf("output value of [%s] : %d\n", list -> name,
-				*((short*)(list -> variable)));
-			break;
-		case 4 :
-			printf("output value of [%s] : %d\n", list -> name,
-				*((int*)(list -> variable)));
-			break;
+			case 1 :
+				printf("output value of [%s] : %d\n", output_list[i].name,
+					*((char*)(output_list[i].variable)));
+				break;
+			case 2 :
+				printf("output value of [%s] : %d\n", output_list[i].name,
+					*((short*)(output_list[i].variable)));
+				break;
+			case 4 :
+				printf("output value of [%s] : %d\n", output_list[i].name,
+					*((int*)(output_list[i].variable)));
+				break;
 		}
-		list = list -> next;
 	}
 	printf("\n");
 
@@ -100,24 +111,21 @@ int io_exchange(void)
 		return 0;
 	}
 
-	list = input_list;
-	while(list != NULL)
+	for(i = 0; i < input_count; i++)
 	{
-		printf("input value of [%s] : ", list -> name);
-		switch(list -> size)
+		printf("input value of [%s] : ", input_list[i].name);
+		switch(input_list[i].size)
 		{
-		case 1 :
-			scanf("%hhd", (char*)(list -> variable));
-			break;
-		case 2 :
-			scanf("%hd", (short*)(list -> variable));
-			break;
-		case 4 :
-			scanf("%d", (int*)(list -> variable));
-			break;
+			case 1 :
+				scanf("%hhd", (char*)(input_list[i].variable));
+				break;
+			case 2 :
+				scanf("%hd", (short*)(input_list[i].variable));
+				break;
+			case 4 :
+				scanf("%d", (int*)(input_list[i].variable));
+				break;
 		}
-		fflush(stdin);
-		list = list -> next;
 	}
 	printf("\nskip count : ");
 	scanf("%d", &skip_count);
@@ -130,22 +138,15 @@ int io_exchange(void)
 
 int io_cleanup(void)
 {
-	io_value_t* list;
-	io_value_t* tmp;
-
-	list = output_list;
-	while(list != NULL)
+	if(input_list != NULL)
 	{
-		tmp = list -> next;
-		free(list);
-		list = tmp;
+		free(input_list);
+		input_list = NULL;
 	}
-	list = input_list;
-	while(list != NULL)
+	if(output_list != NULL)
 	{
-		tmp = list -> next;
-		free(list);
-		list = tmp;
+		free(output_list);
+		output_list = NULL;
 	}
 	
 	return 0;

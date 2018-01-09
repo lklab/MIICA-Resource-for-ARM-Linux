@@ -16,7 +16,7 @@ static os_sig_t registered_handler = NULL;
 static void sigint_handler(int sig);
 static void timespec_chk_overflow(struct timespec *ts);
 
-int os_task_init(task_t* task, os_proc_t proc, unsigned long long period)
+int os_task_init(os_task_t* task, os_proc_t proc, unsigned long long period)
 {
 	task -> proc = proc;
 	task -> period = period;
@@ -25,7 +25,7 @@ int os_task_init(task_t* task, os_proc_t proc, unsigned long long period)
 	return 0;
 }
 
-int os_task_start(task_t* task)
+int os_task_start(os_task_t* task)
 {
 	clock_gettime(CLOCK_REALTIME, &read_time);
 
@@ -43,7 +43,7 @@ int os_task_start(task_t* task)
 	return 0;
 }
 
-int os_task_stop(task_t* task)
+int os_task_stop(os_task_t* task)
 {
 	task -> alive = 0;
 	return 0;
