@@ -333,6 +333,7 @@ int io_cleanup(void)
 		ec_slave[0].state = EC_STATE_INIT;
 		ec_writestate(0);
 		ec_close();
+		is_connected = 0;
 	}
 	return 0;
 }
