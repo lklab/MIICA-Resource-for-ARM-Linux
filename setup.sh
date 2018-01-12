@@ -75,7 +75,7 @@ make
 cd ..
 
 # copy result files to release
-cp liblist.txt ${RELEASE}
+cp options.txt ${RELEASE}
 if [ ! -d ${RELEASE}/lib ] ; then
 	mkdir ${RELEASE}/lib
 fi
